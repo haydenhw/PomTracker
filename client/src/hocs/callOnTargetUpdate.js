@@ -5,16 +5,12 @@ import { connect } from 'react-redux';
 export default function callOnTargetUpdate(getTargetInfo, onTargetUpdate) {
   return (WrappedComponent) => {
     class BaseComponent extends Component {
-      shouldComponentUpdate(nextProps) {
-        if (this.props.targetValue === 'ADD_PROJECT') {
-          // console.log(this.props.remoteSubmitForm, nextProps.remoteSubmitForm);
-        }
-        // console.log(this.props.form)
-        return true;
+      componentWillReceiveProps() {
+        console.log(this.props.remoteSubmitForm);
       }
       
       componentDidUpdate(prevProps) {
-        console.log(prevProps.remoteSubmitForm, this.props.remoteSubmitForm);
+        // console.log(prevProps.remoteSubmitForm, this.props.remoteSubmitForm);
         // console.log(this.props.onTargetUpdate);
         
         
@@ -34,7 +30,11 @@ export default function callOnTargetUpdate(getTargetInfo, onTargetUpdate) {
         return <WrappedComponent {...this.props} /> 
       }
     }
-    const mapStateToProps = state => ({ remoteSubmitForm: state.customForm.remoteSubmitForm});
+    const mapStateToProps = state => {
+      console.log(state.customForm.remoteSubmitForm);
+      return({ remoteSubmitForm: state.customForm.remoteSubmitForm});
+      
+    } 
     return connect(mapStateToProps)(BaseComponent);
   }
 }  

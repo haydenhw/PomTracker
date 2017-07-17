@@ -45,8 +45,7 @@ class EditProjectPage extends Component {
       })
     }
     
-    updateProject(project, projectName);
-    remoteSubmit('ADD_TASKS');
+    // updateProject(project, projectName);
     // remoteSubmit(null);
     // routeToProjects();
   } 
@@ -54,7 +53,8 @@ class EditProjectPage extends Component {
   handleRemoteSubmit() {
     const { remoteSubmit } = this.props;
     
-    remoteSubmit('ADD_PROJECT');
+    remoteSubmit('ADD_TASKS');
+    // remoteSubmit('ADD_PROJECT');
     
     
     // setTimeout(() => remoteSubmit('ADD_TASKS'), 100)
