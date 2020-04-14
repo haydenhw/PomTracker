@@ -54,6 +54,7 @@ projectsRouter
 
     for (const [key, value] of Object.entries(newProject))
       if (value == null)
+        // how would your approach to this abstraction differ?
         return response.missingKeyError(res, key);
 
     try {
@@ -64,7 +65,7 @@ projectsRouter
       )
 
       if (tasks) {
-        // is 't' a good variable name here
+        // is 't' a good variable name here ?
         // is it better not to reassign the values of t?
         const newTasks = tasks.map(task => {
           const { client_id, user_id, task_name, recorded_time } = task;

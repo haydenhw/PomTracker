@@ -114,6 +114,7 @@ export  function postProject(projectName, tasks = []) {
       // Add database id to new tasks in redux store
       const { tasks: savedTasks } = savedProject;
       if (savedTasks  && savedTasks.length > 0) {
+        // what do you think about using just 't' as a variable name here?
         savedTasks.forEach((t) => {
           dispatch(postTaskSuccess({
             projectDatabaseId: t.project_id,
