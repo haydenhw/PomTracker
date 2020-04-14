@@ -86,55 +86,47 @@ function postTaskSuccess({ projectDatabaseId, taskClientId, taskDatabaseId }) {
   }
 }
 
+function postProjectRequest(newProject) {
+  return {
+    type: POST_PROJECT_REQUEST,
+    project: newProject,
+  }
+}
+
 export const POST_PROJECT_REQUEST = 'POST_PROJECT_REQUEST';
-export function postProject(projectName, tasks) {
-  return (dispatch) => {
-    const newProject = {
+export  function postProject(projectName, tasks = []) {
+  return async (dispatch) => {
+    let newProject = {
       projectName,
       userId: getUser()._id,
       clientId: shortid.generate(),
     };
 
     newProject.tasks = tasks.map(t => ({ ...t, userId: newProject.userId }));
+    dispatch(postProjectRequest(newProject));
 
-    dispatch({
-      type: POST_PROJECT_REQUEST,
-      project: newProject,
-    });
+    newProject = snakecaseKeys(newProject);
+    newProject.tasks = newProject.tasks.map(t => snakecaseKeys(t));
+    try {
+      const { data: savedProject } = await axios.post(projectsUrl, newProject);
+      // Add database id to new project in redux store
+      dispatch(postProjectSuccess(savedProject.client_id, savedProject.id));
+      // Add database id to new tasks in redux store
+      const { tasks: savedTasks } = savedProject;
+      if (savedTasks  && savedTasks.length > 0) {
+        savedTasks.forEach((t) => {
+          dispatch(postTaskSuccess({
+            projectDatabaseId: t.project_id,
+            taskClientId: t.client_id,
+            taskDatabaseId: t.id,
+          }));
+        });
+      }
 
-    const dbProject = snakecaseKeys(newProject);
-    dbProject.tasks = newProject.tasks.map(t => snakecaseKeys(t));
-    fetch(
-      projectsUrl,
-      {
-        method: 'POST',
-        body: JSON.stringify(dbProject),
-        headers: new Headers({
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        }),
-      })
-      .then((res) => {
-        return res.json();
-      })
-      .then((project) => {
-        // Add database id to new project in redux store
-        dispatch(postProjectSuccess(project.client_id, project.id));
-
-        // Add database id to new tasks in redux store
-        const { tasks } = project;
-        if (tasks && tasks.length > 0) {
-          tasks.forEach((t) => {
-            dispatch(postTaskSuccess({
-              projectDatabaseId: t.project_id,
-              taskClientId: t.client_id,
-              taskDatabaseId: t.id,
-            }));
-          });
-        }
-
-        localStorage.selectedProjectId = project.client_id;
-      });
+      localStorage.selectedProjectId = savedProject.client_id;
+    } catch (err) {
+      console.error(err);
+    }
   };
 }
 

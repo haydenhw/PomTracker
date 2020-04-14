@@ -17,6 +17,15 @@ const serializeProject = project => ({
   tasks: project.tasks
 })
 
+// TODO move to external file an import
+const response = {
+  missingKeyError(res, key) {
+    return res.status(400).json({
+      error: {message: `Missing '${key}' in request body`}
+    })
+  }
+}
+
 projectsRouter
   .route('/')
   .get(async (req, res, next) => {
@@ -37,42 +46,49 @@ projectsRouter
     }
   })
   .post(jsonParser, async (req, res, next) => {
-    // what if project had mnay more properties than this?
-    let {project_name, client_id, user_id, tasks} = req.body
+    // what if project had many more properties than this?
+    const {project_name, client_id, user_id, tasks} = req.body
     const newProject = {project_name, client_id, user_id}
     // how are the variable names?
     // the order and placement of statements?
 
     for (const [key, value] of Object.entries(newProject))
       if (value == null)
-        return res.status(400).json({
-          error: {message: `Missing '${key}' in request body`}
+        return response.missingKeyError(res, key);
+
+    try {
+      const knexInstance = req.app.get('db');
+      const savedProject = await ProjectsService.insertProject(
+        knexInstance,
+        newProject
+      )
+
+      if (tasks) {
+        // is 't' a good variable name here
+        // is it better not to reassign the values of t?
+        const newTasks = tasks.map(task => {
+          const { client_id, user_id, task_name, recorded_time } = task;
+          task = { client_id, user_id, task_name, recorded_time };
+          task.project_id = savedProject.id;
+          return task;
         })
 
-    const knexInstance = req.app.get('db');
-    const savedProject = await ProjectsService.insertProject(
-      knexInstance,
-      newProject
-    )
+        for (const task of newTasks) {
+          for (const [key, value] of Object.entries(task))
+            if (value == null)
+              return response.missingKeyError(res, key)
+        }
 
-    let savedTasks;
-    if (tasks) {
-      // is 't' a good variable name here
-      // is it better not to reassign the values of t?
-      const newTasks = tasks.map(t => {
-        const { client_id, user_id, task_name, recorded_time } = t;
-        t = { client_id, user_id, task_name, recorded_time };
-        t.project_id = savedProject.id;
-        return t;
-      })
-      savedTasks = await TasksService.insertTasks(knexInstance, newTasks)
-      savedProject.tasks = savedTasks
-      console.log(require('util').inspect(savedProject, false, null, true))
+        savedProject.tasks = await TasksService.insertTasks(knexInstance, newTasks)
+      }
+
+      res
+        .status(201)
+        .location(path.posix.join(req.originalUrl, `/${savedProject.id}`))
+        .json(serializeProject(savedProject))
+    } catch(err) {
+      next(err)
     }
-    res
-      .status(201)
-      .location(path.posix.join(req.originalUrl, `/${savedProject.id}`))
-      .json(serializeProject(savedProject))
   })
 
 projectsRouter
